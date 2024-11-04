@@ -1,22 +1,63 @@
+from io import BytesIO
+from hashlib import md5
 import asyncio
 import fastapi_poe as fp
+import mimetypes
+from io import BytesIO
+
+from app.utils.mylogger import get_logger
+logger = get_logger(__name__)
 
 # Create an asynchronous function to encapsulate the async for loop
 
 
-async def get_responses(api_key, messages):
-    async for partial in fp.get_bot_response(messages=messages, bot_name="GPT-3.5-Turbo", api_key=api_key):
-        print(partial.text, end='', flush=True)
+class Poe():
+    def __init__(self, api_key) -> None:
+        self.api_key = api_key
+        self.buff = BytesIO()
 
-# Replace <api_key> with your actual API key, ensuring it is a string.
-api_key = "cUxTDLmUQK2cY-Y7CBe3VWLLlTVZf1yhhJJhQsj0YLo"
-message = fp.ProtocolMessage(role="user", content="tell me a 500 word joke")
+    async def async_get_responses(self, messages):
+        async for partial in fp.get_bot_response(messages=messages, bot_name="ChatGPT-4o-Latest-128k", api_key=self.api_key):
+            # print(partial.text, end='', flush=True)
+            self.buff.write(partial.text.encode())
 
-# Run the event loop
-# For Python 3.7 and newer
-asyncio.run(get_responses(api_key, [message]))
+    def get_response(self, q: str, attachs: list = []):
+        atts = []
+        for a in attachs:
+            mtype = mimetypes.guess_type(a)[0]
+            name = a.split('/')[-1]
+            atts.append(fp.Attachment(
+                url=attachs[0], content_type=mtype, name=name))
 
-# For Python 3.6 and older, you would typically do the following:
-# loop = asyncio.get_event_loop()
-# loop.run_until_complete(get_responses(api_key))
-# loop.close()
+        message = fp.ProtocolMessage(
+            role="user", content=q, attachments=atts)
+
+        asyncio.run(self.async_get_responses([message]))
+        self.buff.seek(0)
+        return self.buff.read().decode()
+
+
+if __name__ == "__main__":
+    from app.crawlers.huadian import HuadianCrawler
+    from bs4 import BeautifulSoup
+    from app.utils.oss import oss_upload_buff
+    from app.config import HUADIAN_PASSWORD, HUADIAN_USER, POE_TOKEN
+
+    cr = HuadianCrawler()
+    cr.connect(username=HUADIAN_USER, password=HUADIAN_PASSWORD)
+    text = cr.get_html(
+        "http://school.huadianline.com/index.php?app=exams&mod=Index&act=examsroom&paper_id=640&joinType=1")
+    bs = BeautifulSoup(text, "html.parser")
+    r = bs.select_one("ul.test-paper-box")
+    logger.info(r.prettify())
+    buff = r.encode()
+    hash = md5(buff).hexdigest()
+    # logger.info(hash)
+    # oss_upload_buff(buff, f"huadian/exam/{hash}.html")
+    # 1c865dc004f83ce90bfdc9989d24ec85.html
+    llm = Poe(POE_TOKEN)
+    r = llm.get_response(
+        f"请作答下面试卷中的所有题. 对于选择题, 只给出编号即可. 所有题目都给出精炼的解析:\n\n{r.prettify()}")
+    print(r)
+    with open(f"{hash}.md", "w") as f:
+        f.write(r)
