@@ -42,13 +42,21 @@ if __name__ == "__main__":
     from bs4 import BeautifulSoup
     from app.utils.oss import oss_upload_buff
     from app.config import HUADIAN_PASSWORD, HUADIAN_USER, POE_TOKEN
+    import sys
 
     cr = HuadianCrawler()
     cr.connect(username=HUADIAN_USER, password=HUADIAN_PASSWORD)
-    text = cr.get_html(
-        "http://school.huadianline.com/index.php?app=exams&mod=Index&act=examsroom&paper_id=640&joinType=1")
+    try:
+        text = cr.get_html(
+            f"http://school.huadianline.com/index.php?app=exams&mod=Index&act=examsroom&paper_id={sys.argv[1]}&joinType=1")
+    except Exception as e:
+        logger.exception(e)
+        exit()
     bs = BeautifulSoup(text, "html.parser")
     r = bs.select_one("ul.test-paper-box")
+    if not r:
+        logger.error("未找到试卷")
+        exit()
     logger.info(r.prettify())
     buff = r.encode()
     hash = md5(buff).hexdigest()
@@ -59,5 +67,5 @@ if __name__ == "__main__":
     r = llm.get_response(
         f"请作答下面试卷中的所有题. 对于选择题, 只给出编号即可. 所有题目都给出精炼的解析:\n\n{r.prettify()}")
     print(r)
-    with open(f"{hash}.md", "w") as f:
+    with open(f"{sys.argv[1]}.md", "w") as f:
         f.write(r)
