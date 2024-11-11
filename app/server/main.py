@@ -35,8 +35,8 @@ def llm_qa(school: int, paper_id: int, sec: str = Depends(verify_secret,)):
         hash = md5(r.encode()).hexdigest()
     else:
         cr = HuadianCrawler()
-        cr.connect(username=HUADIAN_USER, password=HUADIAN_PASSWORD)
         try:
+            cr.connect(username=HUADIAN_USER, password=HUADIAN_PASSWORD)
             text = cr.get_html(
                 f"http://school.huadianline.com/index.php?app=exams&mod=Index&act=examsroom&paper_id={paper_id}&joinType=1")
         except Exception as e:
@@ -45,6 +45,7 @@ def llm_qa(school: int, paper_id: int, sec: str = Depends(verify_secret,)):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="服务器内部问题",
             )
+        cr.close()
         bs = BeautifulSoup(text, "html.parser")
         r = bs.select_one("ul.test-paper-box")
         if not r:

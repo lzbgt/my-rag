@@ -32,12 +32,15 @@ class HuadianCrawler(Crawler):
             raise Exception(errmsg)
 
     def get_html(self, url, **kwargs):
-        res = self.session.get(url)
+        res = self.session.get(url, timeout=60)
         if res.status_code != 200:
             errmsg = f"{res.status_code}: {res.text}"
             logger.error(errmsg)
             raise Exception(errmsg)
         return res.text
+
+    def close(self):
+        self.session.close()
 
 
 if __name__ == "__main__":
