@@ -54,8 +54,9 @@ def llm_qa(school: int, paper_id: int, sec: str = Depends(verify_secret,)):
                 detail="未找到试卷",
             )
         logger.info(r.prettify())
+        r = r.prettify()
         with open(f"{paper_id}.html", "w") as f:
-            f.write(r.prettify())
+            f.write(r)
         buff = r.encode()
         hash = md5(buff).hexdigest()
         # logger.info(hash)
@@ -63,7 +64,7 @@ def llm_qa(school: int, paper_id: int, sec: str = Depends(verify_secret,)):
         # 1c865dc004f83ce90bfdc9989d24ec85.html
         llm = Poe(POE_TOKEN)
         a = llm.get_response(
-            f"请作答下面试卷中的所有题. 对于选择题, 只给出编号即可. 所有题目都给出精炼的解析:\n\n{r.prettify()}")
+            f"请作答下面试卷中的所有题. 对于选择题, 只给出编号即可. 所有题目都给出精炼的解析:\n\n{r}")
         with open(f"{paper_id}.md", "w") as f:
             f.write(a)
 
@@ -72,7 +73,7 @@ def llm_qa(school: int, paper_id: int, sec: str = Depends(verify_secret,)):
         "paper_id": paper_id,
         "answer": a,
         "hash": hash,
-        "paper": r.prettify()
+        "paper": r
     }
     cdata = gzip.compress(json.dumps(data).encode("utf-8"))
     headers = {
