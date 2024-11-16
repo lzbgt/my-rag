@@ -65,7 +65,7 @@ if __name__ == "__main__":
     # 1c865dc004f83ce90bfdc9989d24ec85.html
     llm = Poe(POE_TOKEN)
     r = llm.get_response(
-        f"请作答下面试卷中的所有题. 对于选择题, 只给出编号即可. 所有题目都给出精炼的解析:\n\n{r.prettify()}")
+        f"你是一个研究生. 作答下面试卷中的全部试题. 对于选择题, 给出正确答案的编号并给出你的解析, 不用重复题目的内容. 对于其他类型的试题, 给出试题本身的精炼描述和你回答该题目的答案及解析.\n\n{r.prettify()}")
     print(r)
     with open(f"{sys.argv[1]}.md", "w") as f:
         f.write(r)
